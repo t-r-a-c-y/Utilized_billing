@@ -87,8 +87,11 @@ public class CustomerServiceImpl implements CustomerService {
 
     @Override
     @Transactional
-    public void delete(Long id) {
-        customerRepository.delete(find(id));
+    public CustomerResponse updateStatus(Long id, CustomerStatus status) {
+        // Soft state change only — the customer row and its history are kept.
+        Customer customer = find(id);
+        customer.setStatus(status);
+        return EntityMapper.toCustomerResponse(customerRepository.save(customer));
     }
 
     private Customer find(Long id) {

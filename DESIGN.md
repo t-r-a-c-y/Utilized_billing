@@ -212,7 +212,7 @@ sequenceDiagram
 | POST | `/api/v1/customers` | register customer | ADMIN |
 | PUT | `/api/v1/customers/{id}` | update customer | ADMIN |
 | GET | `/api/v1/customers` `/{id}` | list/get customer | ADMIN, FINANCE, OPERATOR |
-| DELETE | `/api/v1/customers/{id}` | delete customer | ADMIN |
+| PATCH | `/api/v1/customers/{id}/status` | activate/deactivate customer (no hard delete — preserves audit) | ADMIN |
 | POST | `/api/v1/meters` | register meter | ADMIN |
 | PUT | `/api/v1/meters/{id}` | update meter | ADMIN |
 | GET | `/api/v1/meters` `/{id}` `/customer/{id}` | list/get meters | ADMIN, FINANCE, OPERATOR |

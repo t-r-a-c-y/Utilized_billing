@@ -2,6 +2,7 @@ package com.utility.billing.controller;
 
 import com.utility.billing.dto.request.CustomerRequest;
 import com.utility.billing.dto.response.CustomerResponse;
+import com.utility.billing.entity.enums.CustomerStatus;
 import com.utility.billing.service.CustomerService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -51,11 +52,13 @@ public class CustomerController {
         return customerService.getById(id);
     }
 
-    @Operation(summary = "Delete a customer (ADMIN)")
+    @Operation(summary = "Activate / deactivate a customer (ADMIN)",
+            description = "Customers are never deleted — to preserve audit history (bills, payments, "
+                    + "notifications) an admin sets the status to ACTIVE or INACTIVE. "
+                    + "Inactive customers cannot receive new bills.")
     @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        customerService.delete(id);
-        return ResponseEntity.noContent().build();
+    @PatchMapping("/{id}/status")
+    public CustomerResponse updateStatus(@PathVariable Long id, @RequestParam CustomerStatus status) {
+        return customerService.updateStatus(id, status);
     }
 }

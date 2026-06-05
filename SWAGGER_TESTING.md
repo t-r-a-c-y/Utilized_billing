@@ -11,7 +11,7 @@ and proves **validation + no-duplicate** rules. It uses **4 customers**:
 | 1 | **Tracy Tesi** | **tracytesi69@gmail.com** | **MAIN** — self-registers, claims a meter, gets billed → **real emails land here** |
 | 2 | John Habimana | john@example.rw | admin-created; used for PUT (update) |
 | 3 | Aline Uwase | aline@example.rw | admin-created; kept |
-| 4 | Eric Niyonzima | eric@example.rw | admin-created; **deleted** (DELETE test) |
+| 4 | Eric Niyonzima | eric@example.rw | admin-created; **deactivated** (status PATCH test — customers are never deleted) |
 
 > 📧 **Email check:** because Tracy uses a real Gmail address and SMTP is configured,
 > she receives: a **signup OTP**, a **login OTP**, a **bill notification**, and a
@@ -95,8 +95,11 @@ then
   "email": "john@example.rw", "phoneNumber": "+250788999999",
   "address": "KG 99 Ave, Kigali", "status": "ACTIVE" }
 ```
-### `DELETE /customers/4`  → **204** (removes Eric — an "other" customer, never the main one)
-### `GET /customers` again  → **200**, now 3 customers.
+### `PATCH /customers/4/status?status=INACTIVE`  → **200** (deactivate Eric)
+> Customers are **never hard-deleted** — the row is kept so the audit history (bills,
+> payments, notifications) survives. Deactivation just flips the status; an INACTIVE
+> customer cannot receive new bills. Reactivate with `?status=ACTIVE`.
+### `GET /customers` again  → **200**, still 4 customers (Eric now `INACTIVE`).
 
 ---
 
@@ -224,7 +227,7 @@ Every error returns the standard envelope:
 ## Endpoint coverage checklist (all hit above)
 - **Auth:** signup ✓ verify-account ✓ login ✓ verify-otp ✓ forgot-password ✓ reset-password ✓
 - **Users:** GET list ✓ GET id ✓ PATCH status ✓
-- **Customers:** POST ✓ GET ✓ GET id ✓ PUT ✓ DELETE ✓
+- **Customers:** POST ✓ GET ✓ GET id ✓ PUT ✓ PATCH status (activate/deactivate) ✓
 - **Meters:** POST ✓ PUT ✓ GET ✓ GET id ✓ GET by-customer ✓ claim ✓
 - **Readings:** POST ✓ GET ✓ GET id ✓ GET by-meter ✓
 - **Config:** POST tariff/tax/penalty ✓ GET tariffs/tariff-id/taxes/penalties ✓
