@@ -1,0 +1,115 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: utility-billing-system
+
+  # ----------------------------------------------------------------------
+  # Default profile uses an in-memory H2 database so the project runs with
+  # ZERO external setup (great for grading / quick demo). Switch to MySQL or
+  # PostgreSQL by activating the matching profile, e.g.:
+  #   mvn spring-boot:run -Dspring-boot.run.profiles=mysql
+  # ----------------------------------------------------------------------
+  profiles:
+    active: postgres
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: false
+
+  # ----------------------------------------------------------------------
+  # SMTP for OTP emails. Defaults target Gmail; supply real credentials via
+  # env vars MAIL_USERNAME / MAIL_PASSWORD (use a Gmail "App Password", not
+  # your normal password). If sending fails, the OTP is still logged to the
+  # console when app.otp.log-to-console=true, so demos work without SMTP.
+  # ----------------------------------------------------------------------
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    # Gmail app password — stored WITHOUT the display spaces (the actual secret
+    # is 16 chars). Keep this out of public repos and revoke it after the exam.
+    username: ${MAIL_USERNAME:tracytesi69@gmail.com}
+    password: ${MAIL_PASSWORD:dtyqfbkewyjxeqja}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+    # don't block startup if the mail server is unreachable
+    test-connection: false
+
+# JWT settings (override the secret via env var APP_JWT_SECRET in production)
+app:
+  jwt:
+    # Base64-friendly 256-bit secret. CHANGE THIS in production.
+    secret: ${APP_JWT_SECRET:Y2hhbmdlLXRoaXMtc3VwZXItc2VjcmV0LWtleS1mb3ItdXRpbGl0eS1iaWxsaW5n}
+    expiration-ms: 86400000   # 24 hours
+  seed:
+    enabled: true             # create a default ROLE_ADMIN on first boot
+  otp:
+    expiry-minutes: 10        # how long an OTP code stays valid
+    length: 6                 # number of digits
+    from-address: no-reply@utility.rw
+    log-to-console: true      # also print the OTP to logs (handy for demos/exams)
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha      # order tag groups 1..9 (Authentication first)
+    operations-sorter: alpha # order endpoints within each group by path
+    doc-expansion: none      # start collapsed for a clean overview
+  api-docs:
+    path: /v3/api-docs
+
+---
+# ===================== H2 (default, no setup) =====================
+spring:
+  config:
+    activate:
+      on-profile: h2
+  datasource:
+    url: jdbc:h2:mem:utilitydb;DB_CLOSE_DELAY=-1;MODE=MySQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+
+---
+# ===================== MySQL =====================
+spring:
+  config:
+    activate:
+      on-profile: mysql
+  datasource:
+    url: jdbc:mysql://localhost:3306/utility_billing?createDatabaseIfNotExist=true&serverTimezone=UTC
+    username: ${DB_USER:root}
+    password: ${DB_PASSWORD:root}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
+
+---
+# ===================== PostgreSQL =====================
+spring:
+  config:
+    activate:
+      on-profile: postgres
+  datasource:
+    url: jdbc:postgresql://localhost:5432/utility_billing
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:1234}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
