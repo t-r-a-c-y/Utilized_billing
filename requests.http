@@ -1,0 +1,252 @@
+### ===========================================================================
+### Utility Billing System - IntelliJ HTTP Client test file
+### Run each request with the green ▶ arrow in the gutter.
+### Tokens are captured automatically into the {{token}} variable.
+###
+### OTP NOTE: OTPs are printed in the Run console as
+###   "OTP for <email> [PURPOSE] = 123456".
+### Copy that code into the @otp variable (or the request body) before running
+### the matching verify request.
+### ===========================================================================
+
+@host = http://localhost:8080
+@admin = admin@utility.rw
+@adminPass = Admin123!
+@operator = operator@utility.rw
+@operatorPass = Operator123!
+@finance = finance@utility.rw
+@financePass = Finance123!
+
+# ↓↓↓ paste the OTP you read from the console into this variable ↓↓↓
+@otp = 000000
+
+### ---------------------------------------------------------------------------
+### 1. LOGIN step 1 (admin) — triggers an OTP (check the Run console for it)
+### ---------------------------------------------------------------------------
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{ "email": "{{admin}}", "password": "{{adminPass}}" }
+
+### ---------------------------------------------------------------------------
+### 2. LOGIN step 2 — verify OTP, capture JWT into {{token}}
+###    (update @otp above first!)
+### ---------------------------------------------------------------------------
+POST {{host}}/api/v1/auth/verify-otp
+Content-Type: application/json
+
+{ "email": "{{admin}}", "otp": "{{otp}}" }
+
+> {%
+    if (response.status === 200) {
+        client.global.set("token", response.body.token);
+        client.log("Token captured.");
+    }
+%}
+
+### ---------------------------------------------------------------------------
+### 3. Create a customer (ADMIN)
+### ---------------------------------------------------------------------------
+POST {{host}}/api/v1/customers
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "fullNames": "John Habimana",
+  "nationalId": "1199080012345678",
+  "email": "john@example.rw",
+  "phoneNumber": "+250788654321",
+  "address": "KG 11 Ave, Kigali",
+  "status": "ACTIVE"
+}
+
+### List customers
+GET {{host}}/api/v1/customers
+Authorization: Bearer {{token}}
+
+### ---------------------------------------------------------------------------
+### 4. Create a meter (ADMIN) — customerId 1
+### ---------------------------------------------------------------------------
+POST {{host}}/api/v1/meters
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "meterNumber": "MTR-EL-0001",
+  "meterType": "ELECTRICITY",
+  "installationDate": "2025-01-15",
+  "customerId": 1,
+  "status": "ACTIVE"
+}
+
+### ---------------------------------------------------------------------------
+### 5. Configure tariff / tax / penalty (ADMIN)
+### ---------------------------------------------------------------------------
+POST {{host}}/api/v1/config/tariffs
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Electricity Residential 2026",
+  "meterType": "ELECTRICITY",
+  "tariffType": "TIERED",
+  "serviceCharge": 1500.00,
+  "effectiveStart": "2026-01-01",
+  "tiers": [
+    { "upToUnit": 20, "ratePerUnit": 89 },
+    { "upToUnit": 50, "ratePerUnit": 212 },
+    { "upToUnit": null, "ratePerUnit": 249 }
+  ]
+}
+
+###
+POST {{host}}/api/v1/config/taxes
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{ "name": "VAT", "percentage": 18.00, "effectiveStart": "2026-01-01" }
+
+###
+POST {{host}}/api/v1/config/penalties
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{ "name": "Late payment penalty", "percentage": 5.00, "effectiveStart": "2026-01-01" }
+
+### ---------------------------------------------------------------------------
+### 6. Capture a reading — needs an OPERATOR token.
+###    Login as operator (step1+step2) and re-capture {{token}} first, OR
+###    capture readings with the admin token (ADMIN is also allowed).
+### ---------------------------------------------------------------------------
+POST {{host}}/api/v1/readings
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "meterId": 1,
+  "currentReading": 1320.00,
+  "readingDate": "2026-05-31",
+  "month": 5,
+  "year": 2026
+}
+
+### ---------------------------------------------------------------------------
+### 7. Generate the bill (ADMIN/OPERATOR)
+### ---------------------------------------------------------------------------
+POST {{host}}/api/v1/bills/generate
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{ "meterId": 1, "month": 5, "year": 2026, "dueInDays": 15 }
+
+### List all bills (note the bill_reference for payment)
+GET {{host}}/api/v1/bills
+Authorization: Bearer {{token}}
+
+### ---------------------------------------------------------------------------
+### 8. Approve the bill (ADMIN/FINANCE) — replace {id} with the real id
+### ---------------------------------------------------------------------------
+PATCH {{host}}/api/v1/bills/1/approve
+Authorization: Bearer {{token}}
+
+### ---------------------------------------------------------------------------
+### 9. Record a payment (FINANCE/ADMIN) — replace the reference with the real one
+### ---------------------------------------------------------------------------
+POST {{host}}/api/v1/payments
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "billReference": "BILL-2026-05-000001",
+  "amountPaid": 5000.00,
+  "paymentMethod": "MOBILE_MONEY",
+  "paymentDate": "2026-06-05"
+}
+
+### ---------------------------------------------------------------------------
+### 10. View notifications for customer 1
+### ---------------------------------------------------------------------------
+GET {{host}}/api/v1/notifications/customer/1
+Authorization: Bearer {{token}}
+
+
+### ===========================================================================
+### BAD-CASE / NEGATIVE TESTS  (expected status in the comment)
+### ===========================================================================
+
+### B1. No token on a secured endpoint  ->  401 Unauthorized
+GET {{host}}/api/v1/users
+
+### B2. Wrong password  ->  401 Unauthorized
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{ "email": "{{admin}}", "password": "WRONG" }
+
+### B3. Wrong / no OTP  ->  422 Unprocessable Entity
+POST {{host}}/api/v1/auth/verify-otp
+Content-Type: application/json
+
+{ "email": "{{admin}}", "otp": "000000" }
+
+### B4. Duplicate customer (same nationalId)  ->  409 Conflict
+POST {{host}}/api/v1/customers
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{ "fullNames": "Dup", "nationalId": "1199080012345678", "email": "dup@example.rw",
+  "phoneNumber": "+250788000000", "address": "X", "status": "ACTIVE" }
+
+### B5. Validation error (missing/invalid fields)  ->  400 Bad Request
+POST {{host}}/api/v1/customers
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{ "fullNames": "", "nationalId": "1", "email": "not-an-email", "phoneNumber": "abc", "address": "" }
+
+### B6. Duplicate meter number  ->  409 Conflict
+POST {{host}}/api/v1/meters
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{ "meterNumber": "MTR-EL-0001", "meterType": "WATER", "installationDate": "2025-01-01",
+  "customerId": 1, "status": "ACTIVE" }
+
+### B7. Reading where current <= previous  ->  422 Unprocessable Entity
+POST {{host}}/api/v1/readings
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{ "meterId": 1, "previousReading": 1320, "currentReading": 1000,
+  "readingDate": "2026-06-30", "month": 6, "year": 2026 }
+
+### B8. Duplicate reading for the same meter/month/year  ->  409 Conflict
+POST {{host}}/api/v1/readings
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{ "meterId": 1, "currentReading": 1400, "readingDate": "2026-05-31", "month": 5, "year": 2026 }
+
+### B9. Pay a bill that is NOT yet approved (PENDING)  ->  422 Unprocessable Entity
+###     (generate a fresh bill but do NOT approve it, then run this)
+POST {{host}}/api/v1/payments
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{ "billReference": "BILL-2026-05-000001", "amountPaid": 100, "paymentMethod": "CASH" }
+
+### B10. Overpay a bill (amount > outstanding)  ->  422 Unprocessable Entity
+POST {{host}}/api/v1/payments
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{ "billReference": "BILL-2026-05-000001", "amountPaid": 99999999, "paymentMethod": "CASH" }
+
+### B11. Wrong role: OPERATOR tries to create a customer (ADMIN-only)  ->  403 Forbidden
+###      First log in as operator and capture {{token}}, then run this.
+POST {{host}}/api/v1/customers
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{ "fullNames": "Should Fail", "nationalId": "9999999999", "email": "x@x.rw",
+  "phoneNumber": "+250788111111", "address": "X", "status": "ACTIVE" }
