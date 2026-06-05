@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -202,7 +203,15 @@ public class BillServiceImpl implements BillService {
         BigDecimal lowerBound = BigDecimal.ZERO;
         BigDecimal amount = BigDecimal.ZERO;
 
-        for (TariffTier tier : tariff.getTiers()) {
+        // Evaluate tiers in ascending bound order with the open-ended tier
+        // (upToUnit == null) ALWAYS last. We sort in Java rather than relying on
+        // @OrderBy, because SQL null-ordering differs across H2/MySQL/PostgreSQL.
+        List<TariffTier> orderedTiers = tariff.getTiers().stream()
+                .sorted(Comparator.comparing(TariffTier::getUpToUnit,
+                        Comparator.nullsLast(Comparator.naturalOrder())))
+                .toList();
+
+        for (TariffTier tier : orderedTiers) {
             if (remaining.compareTo(BigDecimal.ZERO) <= 0) break;
 
             BigDecimal blockUnits;

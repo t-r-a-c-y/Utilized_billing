@@ -26,6 +26,16 @@ A robust, enterprise-grade backend built with **Spring Boot 3.3** and **Java 21*
 
 > 💡 **Detailed System Design:** For complete Entity-Relationship Diagrams (ERD), stateful security workflows, and the complete role-permission matrix, please refer directly to [DESIGN.md](DESIGN.md).
 
+### 📚 Documentation Index
+| Document | Contents |
+| :--- | :--- |
+| [DESIGN.md](DESIGN.md) | Full system design, DB schema, security flow, endpoint list, role matrix |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Whole-system architecture & sequence diagrams |
+| [ERD.md](ERD.md) | Entity-relationship diagram (text + Mermaid) + uniqueness/validation rules |
+| [SWAGGER_TESTING.md](SWAGGER_TESTING.md) | Click-by-click Swagger test of **every** endpoint (4-customer scenario) |
+| [TESTING.md](TESTING.md) | Negative-case matrix + Postman / IntelliJ-HTTP files |
+| [REQUIREMENTS_COVERAGE.md](REQUIREMENTS_COVERAGE.md) | Spec checklist (done / partial / planned) |
+
 ---
 
 ## ⚙️ Configuration & Execution
@@ -91,7 +101,11 @@ $env:MAIL_PASSWORD="your-secure-apps-password"
 
 | Step | HTTP Method | Endpoint | Request Payload Requirements | Expected System Outcome |
 | :--- | :--- | :--- | :--- | :--- |
-| **1** | `POST` | `/auth/signup` | `name`, `email`, `phone`, `password`, `role` | `INACTIVE` customer created; signup OTP generated and sent. |
+| **1** | `POST` | `/auth/signup` | `fullNames`, `email`, `phone`, `password`, `role` (+ `nationalId`, `address` when `ROLE_CUSTOMER`) | `INACTIVE` account created; for customers a linked Customer profile is created; signup OTP sent. |
+
+> 🔐 **Password policy:** every password must be **≥ 8 characters** and contain an uppercase
+> letter, a lowercase letter, a number and a special character. Emails are stored lowercase
+> and login is case-insensitive. Passwords are never returned in any API response.
 | **2** | `POST` | `/auth/verify-account` | `email`, `otp` | Profile transitions into `ACTIVE` state. |
 | **3** | `POST` | `/auth/login` | `email`, `password` | Initial validation; secondary access OTP dispatched. |
 | **4** | `POST` | `/auth/verify-otp` | `email`, `otp` | Secure Bearer JWT token emitted to client. |
@@ -133,6 +147,13 @@ Execute this canonical scenario inside Postman or Swagger UI to test the core bi
     "status": "ACTIVE"
   }
   ```
+
+> 👤 **Self-service model:** customers can also **self-register** at `POST /auth/signup`
+> (role `ROLE_CUSTOMER` + `nationalId` + `address`) — this creates their login *and* their
+> Customer profile. Admins may then create an **unassigned** meter (omit `customerId`), and
+> the customer **claims** it by number:
+> `POST /api/v1/meters/claim/{meterNumber}`. A customer may own many meters; a meter belongs
+> to only one customer.
 
 ### 3. Financial Matrix Configurations (Admin Access)
 * **Define Tiered Tariff Structures:**
@@ -204,7 +225,7 @@ Execute this canonical scenario inside Postman or Swagger UI to test the core bi
 │   ├── main
 │   │   ├── java/com/utility/billing      # Application Source Code
 │   │   └── resources
-│   │       ├── application.properties    # Base configurations
+│   │       ├── application.yml           # Base + profile configurations (h2/mysql/postgres)
 │   │       └── db                        # Relational definitions & SQL routines
 │   └── test                              # Integration & Unit Assertions
 ├── DESIGN.md                             # Architectural, ERD, & Flow charts

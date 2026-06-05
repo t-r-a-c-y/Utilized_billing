@@ -91,8 +91,11 @@ plugin in IntelliJ (Settings → Plugins → "Mermaid"), or paste the block into
 ```
 
 **Cardinalities (read "one-to-many" as 1──N):**
-- USER 0..1 ── 1 CUSTOMER (a customer login optionally points to a customer record)
-- CUSTOMER 1 ── N METER
+- USER 0..1 ── 1 CUSTOMER (a ROLE_CUSTOMER login links to exactly one customer record;
+  customers **self-register**, which creates the User + the linked Customer together)
+- CUSTOMER 1 ── 0..N METER — a customer may own several meters
+- METER 0..1 ── 1 CUSTOMER — a meter belongs to **at most one** customer, and may be
+  **UNASSIGNED** (created by an admin, later **claimed** by a customer via its meter number)
 - CUSTOMER 1 ── N BILL
 - CUSTOMER 1 ── N NOTIFICATION
 - METER 1 ── N METER_READING (unique per meter + month + year)
@@ -103,14 +106,26 @@ plugin in IntelliJ (Settings → Plugins → "Mermaid"), or paste the block into
 - TAX / PENALTY / TARIFF are **versioned**; the row whose `[effective_start, effective_end]`
   window covers the billing-cycle date is chosen during bill generation.
 
+**Uniqueness / no-duplicate constraints (enforced in DB + service layer):**
+- `users.email` unique · `customers.national_id` unique · `customers.email` unique
+- `meters.meter_number` unique
+- `meter_readings (meter_id, reading_month, reading_year)` unique (one reading per period)
+- `bills.bill_reference` unique · `bills (meter_id, bill_month, bill_year)` unique (one bill per period)
+
+**Validation highlights (Bean Validation on DTOs + business rules in services):**
+- Strong password (≥8 chars, upper+lower+digit+special); email RFC-format & stored lowercase
+- Phone pattern; meter installation date not in the future
+- current reading > previous; reading only on ACTIVE meters
+- bills only for ACTIVE customers on ACTIVE meters; payments 0 < amount ≤ outstanding balance
+
 ---
 
 ## B. Mermaid ERD (renders to a picture at mermaid.live or with the Mermaid plugin)
 
 ```mermaid
 erDiagram
-    USER ||--o| CUSTOMER : "may link"
-    CUSTOMER ||--o{ METER : owns
+    USER ||--o| CUSTOMER : "self-registers as"
+    CUSTOMER |o--o{ METER : "owns (meter may be unassigned)"
     CUSTOMER ||--o{ BILL : receives
     CUSTOMER ||--o{ NOTIFICATION : gets
     METER ||--o{ METER_READING : "has (1/month/yr)"

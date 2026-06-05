@@ -1,132 +1,237 @@
-# Testing with Swagger UI — Utility Billing System
+# Full Swagger Test Plan — Utility Billing System
 
-Open: **http://localhost:8080/swagger-ui.html**
-(Start the app first; if you changed config, restart it and hard-refresh with `Ctrl+F5`.)
+Open **http://localhost:8080/swagger-ui.html** (start the app first; after any config
+change, restart and hard-refresh with `Ctrl+F5`).
 
-The page shows groups **1. Authentication … 9. Notifications**. Each endpoint:
-click it → **Try it out** → edit the JSON → **Execute** → read the response code/body below.
+This plan exercises **every endpoint and every HTTP method** (POST, GET, PUT, PATCH, DELETE)
+and proves **validation + no-duplicate** rules. It uses **4 customers**:
 
----
+| # | Name | Email | Role in test |
+|---|------|-------|--------------|
+| 1 | **Tracy Tesi** | **tracytesi69@gmail.com** | **MAIN** — self-registers, claims a meter, gets billed → **real emails land here** |
+| 2 | John Habimana | john@example.rw | admin-created; used for PUT (update) |
+| 3 | Aline Uwase | aline@example.rw | admin-created; kept |
+| 4 | Eric Niyonzima | eric@example.rw | admin-created; **deleted** (DELETE test) |
 
-## STEP 0 — Authorize (two-step OTP login)
-
-You must get a JWT and paste it into Swagger's **Authorize** box before the secured
-endpoints work.
-
-1. **1. Authentication → `POST /auth/login` → Try it out**, body:
-   ```json
-   { "email": "admin@utility.rw", "password": "Admin123!" }
-   ```
-   **Execute** → response says an OTP was sent.
-2. **Read the OTP from the IntelliJ Run console:**
-   ```
-   OtpServiceImpl : OTP for admin@utility.rw [LOGIN] = 482915 (valid 10 min)
-   ```
-3. **`POST /auth/verify-otp` → Try it out**, body (use your code):
-   ```json
-   { "email": "admin@utility.rw", "otp": "482915" }
-   ```
-   **Execute** → copy the `token` value from the response.
-4. Click the green **Authorize** button (top-right) → paste the token → **Authorize** → **Close**.
-   (Do **not** type "Bearer " — Swagger adds it.) Now every call is authenticated.
-
-> The token is for ROLE_ADMIN. To test operator/finance-only rules, repeat steps 1–4 with
-> `operator@utility.rw / Operator123!` or `finance@utility.rw / Finance123!` and re-Authorize.
+> 📧 **Email check:** because Tracy uses a real Gmail address and SMTP is configured,
+> she receives: a **signup OTP**, a **login OTP**, a **bill notification**, and a
+> **payment confirmation**. Watch that inbox (and the console — every OTP is logged too).
 
 ---
 
-## Happy path (run in this order)
+## Reading OTPs
+After any OTP step, read the code from the **IntelliJ Run console**:
+`OtpServiceImpl : OTP for <email> [PURPOSE] = 123456`. Tracy's also arrive by email.
 
-### 3. Customers → `POST /customers`
+---
+
+# PART 0 — Authorize as ADMIN (needed for most calls)
+
+**1. Auth → `POST /auth/login`** → Try it out:
 ```json
-{ "fullNames": "John Habimana", "nationalId": "1199080012345678",
-  "email": "john@example.rw", "phoneNumber": "+250788654321",
+{ "email": "admin@utility.rw", "password": "Admin123!" }
+```
+Read the `[LOGIN]` OTP from the console, then **`POST /auth/verify-otp`**:
+```json
+{ "email": "admin@utility.rw", "otp": "PASTE_OTP" }
+```
+Copy `token` → click **Authorize** (top-right) → paste → **Authorize** → **Close**.
+
+---
+
+# PART 1 — Customer 1 (Tracy) self-registers  *(tests the customer auth + email path)*
+
+### `POST /auth/signup`  → **201**
+```json
+{ "fullNames": "Tracy Tesi", "email": "tracytesi69@gmail.com",
+  "phoneNumber": "+250788111001", "password": "Tracy123!",
+  "role": "ROLE_CUSTOMER", "nationalId": "1199900000000001",
+  "address": "KN 1 Ave, Kigali" }
+```
+→ a signup OTP is **emailed to tracytesi69@gmail.com** (and logged). This becomes **Customer id 1**.
+
+### `POST /auth/verify-account`  → **200**
+```json
+{ "email": "tracytesi69@gmail.com", "otp": "PASTE_SIGNUP_OTP" }
+```
+
+### Get Tracy a token: `POST /auth/login` then `POST /auth/verify-otp`
+```json
+{ "email": "tracytesi69@gmail.com", "password": "Tracy123!" }
+```
+then
+```json
+{ "email": "tracytesi69@gmail.com", "otp": "PASTE_LOGIN_OTP" }
+```
+**Save Tracy's token** somewhere — you'll re-Authorize with it for the *claim* and
+*customer-view* steps. (Re-Authorize as ADMIN afterwards for admin steps.)
+
+---
+
+# PART 2 — Customers CRUD (ADMIN)  *(POST / GET / PUT / DELETE)*
+
+### `POST /customers` ×3  → **201** each (creates customers 2, 3, 4)
+```json
+{ "fullNames": "John Habimana", "nationalId": "1199900000000002",
+  "email": "john@example.rw", "phoneNumber": "+250788654322",
   "address": "KG 11 Ave, Kigali", "status": "ACTIVE" }
 ```
-✅ **201** → note the returned `id` (should be 1).
+```json
+{ "fullNames": "Aline Uwase", "nationalId": "1199900000000003",
+  "email": "aline@example.rw", "phoneNumber": "+250788654323",
+  "address": "KN 5 Rd, Kigali", "status": "ACTIVE" }
+```
+```json
+{ "fullNames": "Eric Niyonzima", "nationalId": "1199900000000004",
+  "email": "eric@example.rw", "phoneNumber": "+250788654324",
+  "address": "Musanze, North", "status": "ACTIVE" }
+```
 
-### 4. Meters → `POST /meters`
+### `GET /customers`  → **200** (lists all 4)
+### `GET /customers/1`  → **200** (Tracy)
+### `PUT /customers/2`  → **200** (update John's address/phone)
+```json
+{ "fullNames": "John Habimana", "nationalId": "1199900000000002",
+  "email": "john@example.rw", "phoneNumber": "+250788999999",
+  "address": "KG 99 Ave, Kigali", "status": "ACTIVE" }
+```
+### `DELETE /customers/4`  → **204** (removes Eric — an "other" customer, never the main one)
+### `GET /customers` again  → **200**, now 3 customers.
+
+---
+
+# PART 3 — Meters (ADMIN create + Tracy claims)  *(POST / PUT / GET / claim)*
+
+### `POST /meters` — UNASSIGNED meter  → **201** (`customerId` omitted) → meter id 1
 ```json
 { "meterNumber": "MTR-EL-0001", "meterType": "ELECTRICITY",
-  "installationDate": "2025-01-15", "customerId": 1, "status": "ACTIVE" }
+  "installationDate": "2025-01-15" }
 ```
-✅ **201**.
+### `POST /meters` — assigned directly to John  → **201** → meter id 2
+```json
+{ "meterNumber": "MTR-WT-0002", "meterType": "WATER",
+  "installationDate": "2025-03-05", "customerId": 2, "status": "ACTIVE" }
+```
+### `PUT /meters/2`  → **200** (update meter 2, e.g. status)
+```json
+{ "meterNumber": "MTR-WT-0002", "meterType": "WATER",
+  "installationDate": "2025-03-05", "customerId": 2, "status": "ACTIVE" }
+```
+### `GET /meters`  → **200** ; `GET /meters/1`  → **200** (still unassigned: `customerId: null`)
 
-### 6. Tariffs, Taxes & Penalties → `POST /config/tariffs`
+### **Claim** — switch to **Tracy's token** first (Authorize → Logout → paste Tracy's token):
+`POST /meters/claim/MTR-EL-0001`  → **200** → meter 1 now `customerId: 1` (Tracy).
+### `GET /meters/customer/1` *(re-Authorize as ADMIN)*  → **200** → Tracy's meter listed.
+
+---
+
+# PART 4 — Tariff / Tax / Penalty config (ADMIN)  *(POST / GET)*
+
+### `POST /config/tariffs`  → **201**
 ```json
 { "name": "Electricity Residential 2026", "meterType": "ELECTRICITY",
   "tariffType": "TIERED", "serviceCharge": 1500.00, "effectiveStart": "2026-01-01",
-  "tiers": [ { "upToUnit": 20, "ratePerUnit": 89 },
-             { "upToUnit": 50, "ratePerUnit": 212 },
-             { "upToUnit": null, "ratePerUnit": 249 } ] }
+  "tiers": [ {"upToUnit": 20, "ratePerUnit": 89},
+             {"upToUnit": 50, "ratePerUnit": 212},
+             {"upToUnit": null, "ratePerUnit": 249} ] }
 ```
-Then `POST /config/taxes`:
-```json
-{ "name": "VAT", "percentage": 18.00, "effectiveStart": "2026-01-01" }
-```
-Then `POST /config/penalties`:
-```json
-{ "name": "Late payment penalty", "percentage": 5.00, "effectiveStart": "2026-01-01" }
-```
-✅ **201** each.
+### `POST /config/taxes`  → **201** : `{ "name": "VAT", "percentage": 18.00, "effectiveStart": "2026-01-01" }`
+### `POST /config/penalties`  → **201** : `{ "name": "Late payment penalty", "percentage": 5.00, "effectiveStart": "2026-01-01" }`
+### `GET /config/tariffs`, `GET /config/tariffs/1`, `GET /config/taxes`, `GET /config/penalties`  → **200** each.
 
-### 5. Meter Readings → `POST /readings`
+---
+
+# PART 5 — Readings (OPERATOR or ADMIN)  *(POST / GET)*
+
+### `POST /readings`  → **201** (consumption auto = 1320)
 ```json
 { "meterId": 1, "currentReading": 1320.00, "readingDate": "2026-05-31",
   "month": 5, "year": 2026 }
 ```
-✅ **201**, `consumption = 1320`. *(ADMIN token works; OPERATOR also allowed.)*
+### `GET /readings`  → **200** ; `GET /readings/1`  → **200** ; `GET /readings/meter/1`  → **200**
 
-### 7. Bills → `POST /bills/generate`
+---
+
+# PART 6 — Bills (ADMIN/FINANCE)  *(POST / PATCH / GET) — emails Tracy*
+
+### `POST /bills/generate`  → **201** → status `PENDING`, **bill notification emailed to Tracy**
 ```json
 { "meterId": 1, "month": 5, "year": 2026, "dueInDays": 15 }
 ```
-✅ **201** → status `PENDING`. Note the `id` and `billReference` (e.g. `BILL-2026-05-000001`).
-A notification is created automatically.
+Note the `billReference` (e.g. `BILL-2026-05-000001`).
+### `PATCH /bills/1/approve`  → **200** → `APPROVED`
+### `GET /bills`, `GET /bills/1`, `GET /bills/reference/BILL-2026-05-000001`, `GET /bills/customer/1`  → **200**
+### `POST /bills/apply-overdue`  → **200** (no-op unless past due; exercises the endpoint)
 
-### 7. Bills → `PATCH /bills/{id}/approve`
-Put the bill `id` (e.g. `1`) in the path field → **Execute**.
-✅ **200** → status `APPROVED`.
+---
 
-### 8. Payments → `POST /payments`  (partial then full)
+# PART 7 — Payments (FINANCE/ADMIN)  *(POST / GET) — emails Tracy on full payment*
+
+### `POST /payments` — partial  → **201** → bill `PARTIALLY_PAID`
 ```json
 { "billReference": "BILL-2026-05-000001", "amountPaid": 5000.00,
   "paymentMethod": "MOBILE_MONEY", "paymentDate": "2026-06-05" }
 ```
-✅ **201** → bill becomes `PARTIALLY_PAID`. Pay the remaining `outstandingBalance` again →
-bill becomes `PAID` and a "fully paid" notification is created.
-
-### 9. Notifications → `GET /notifications/customer/1`
-✅ **200** → see the "bill processed" and "fully paid" messages.
+### `POST /payments` — pay the remaining `outstandingBalance`  → **201** → bill `PAID`,
+**payment-confirmation emailed to Tracy**.
+### `GET /payments`, `GET /payments/bill/BILL-2026-05-000001`, `GET /payments/customer/1`  → **200**
 
 ---
 
-## Bad-case tests in Swagger (what to expect)
+# PART 8 — Notifications  *(GET / PATCH)*
 
-| Try this in Swagger | Expected |
-|---------------------|----------|
-| Any secured endpoint **before** Authorize (or click **Authorize → Logout** first) | **401** |
-| `POST /auth/login` with password `WRONG` | **401** Invalid email or password |
-| Login a freshly signed-up (unverified) account | **401** "Account is inactive…" |
-| `POST /auth/verify-otp` with `otp: "000000"` | **422** Invalid/expired/no active OTP |
-| Re-`POST /customers` with the same `nationalId` | **409** Conflict |
-| `POST /customers` with empty `fullNames`, bad `email` | **400** with `fieldErrors` |
-| Re-`POST /meters` with the same `meterNumber` | **409** Conflict |
-| `POST /readings` with `currentReading` ≤ previous (e.g. 1000) | **422** must be greater |
-| Re-`POST /readings` for meter 1, month 5, year 2026 | **409** Conflict |
-| `POST /payments` on a bill that's still `PENDING` (not approved) | **422** not yet approved |
-| `POST /payments` with `amountPaid: 99999999` | **422** exceeds outstanding balance |
-| Authorize as **operator**, then `POST /customers` | **403** Forbidden (ADMIN-only) |
-| `GET /customers/9999` | **404** Not Found |
-
-To test the **403 role** case: Authorize with `operator@utility.rw` (login → console OTP →
-verify-otp → re-Authorize), then `POST /customers` → **403**, but `POST /readings` → **201**.
+### `GET /notifications`  → **200** (bill + payment messages, status `SENT`)
+### `GET /notifications/customer/1`  → **200** (Tracy's messages)
+### `PATCH /notifications/1/sent`  → **200**
 
 ---
 
-## Quick tips
-- The **Schemas** section at the bottom of Swagger lists every request/response model with
-  the example values you see in the "Try it out" bodies.
-- If a secured call returns **401** unexpectedly, your token expired (24h) or you forgot to
-  re-Authorize after switching roles — just redo Step 0.
-- Reading OTPs: always from the **Run console** (`OTP for … = 123456`) for the seeded accounts.
+# PART 9 — Users (ADMIN)  *(GET / PATCH)*
+
+### `GET /users`  → **200** ; `GET /users/1`  → **200**
+### `PATCH /users/{id}/status?status=INACTIVE`  → **200** (deactivate), then `?status=ACTIVE` to restore.
+
+---
+
+# PART 10 — Validation & NO-DUPLICATE checks (must fail as shown)
+
+| Action | Expected |
+|--------|----------|
+| `POST /customers` with the SAME `nationalId` as Tracy (`1199900000000001`) | **409** Conflict |
+| `POST /customers` with the SAME email as John | **409** Conflict |
+| `POST /customers` with empty `fullNames`, `email:"bad"`, `phoneNumber:"abc"` | **400** + `fieldErrors` |
+| `POST /meters` reusing `MTR-EL-0001` | **409** Conflict |
+| `POST /meters` with `installationDate` in the future (e.g. `2099-01-01`) | **400** |
+| `POST /auth/signup` password `abc` (weak) | **400** (policy) |
+| `POST /readings` with `currentReading` ≤ previous | **422** |
+| `POST /readings` duplicate meter 1 / month 5 / 2026 | **409** Conflict |
+| `POST /bills/generate` again for meter 1 / 5 / 2026 | **409** Conflict |
+| `POST /payments` amount `99999999` (over balance) | **422** |
+| `POST /payments` on a still-`PENDING` bill | **422** |
+| Tracy's token → `POST /customers` | **403** Forbidden |
+| any secured call with **Authorize → Logout** | **401** |
+| `GET /customers/9999` | **404** |
+
+Every error returns the standard envelope:
+```json
+{ "timestamp":"...", "status":409, "error":"Conflict",
+  "message":"Customer already exists with National ID: 1199900000000001",
+  "path":"/api/v1/customers", "fieldErrors": null }
+```
+
+---
+
+## Endpoint coverage checklist (all hit above)
+- **Auth:** signup ✓ verify-account ✓ login ✓ verify-otp ✓ forgot-password ✓ reset-password ✓
+- **Users:** GET list ✓ GET id ✓ PATCH status ✓
+- **Customers:** POST ✓ GET ✓ GET id ✓ PUT ✓ DELETE ✓
+- **Meters:** POST ✓ PUT ✓ GET ✓ GET id ✓ GET by-customer ✓ claim ✓
+- **Readings:** POST ✓ GET ✓ GET id ✓ GET by-meter ✓
+- **Config:** POST tariff/tax/penalty ✓ GET tariffs/tariff-id/taxes/penalties ✓
+- **Bills:** POST generate ✓ PATCH approve ✓ POST apply-overdue ✓ GET ✓ GET id ✓ GET reference ✓ GET by-customer ✓
+- **Payments:** POST ✓ GET ✓ GET by-bill ✓ GET by-customer ✓
+- **Notifications:** GET ✓ GET by-customer ✓ PATCH sent ✓
+
+> `forgot-password` / `reset-password`: run them against Tracy
+> (`POST /auth/forgot-password {"email":"tracytesi69@gmail.com"}` → reset OTP emailed →
+> `POST /auth/reset-password {email, otp, newPassword:"Tracy456!"}` → **200**).
