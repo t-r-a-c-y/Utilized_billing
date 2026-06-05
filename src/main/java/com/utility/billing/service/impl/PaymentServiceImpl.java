@@ -22,6 +22,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentRepository paymentRepository;

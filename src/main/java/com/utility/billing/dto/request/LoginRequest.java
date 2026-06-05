@@ -7,11 +7,11 @@ import jakarta.validation.constraints.NotBlank;
 @Schema(description = "Login credentials")
 public record LoginRequest(
 
-        @Schema(example = "admin@utility.rw")
+        @Schema(example = "youremail@example.com", description = "Your registered email")
         @NotBlank @Email
         String email,
 
-        @Schema(example = "Admin123!")
+        @Schema(example = "YourPassword123!", description = "Your account password")
         @NotBlank
         String password
 ) {}

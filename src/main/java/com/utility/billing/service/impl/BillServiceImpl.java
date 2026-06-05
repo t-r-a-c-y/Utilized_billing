@@ -5,6 +5,7 @@ import com.utility.billing.dto.response.BillResponse;
 import com.utility.billing.entity.*;
 import com.utility.billing.entity.enums.BillStatus;
 import com.utility.billing.entity.enums.CustomerStatus;
+import com.utility.billing.entity.enums.MeterStatus;
 import com.utility.billing.entity.enums.TariffType;
 import com.utility.billing.exception.BusinessRuleException;
 import com.utility.billing.exception.DuplicateResourceException;
@@ -25,6 +26,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class BillServiceImpl implements BillService {
 
     private static final int DEFAULT_DUE_DAYS = 15;
@@ -49,10 +51,22 @@ public class BillServiceImpl implements BillService {
         Meter meter = reading.getMeter();
         Customer customer = meter.getCustomer();
 
+        // A meter must be claimed by a customer before it can be billed.
+        if (customer == null) {
+            throw new BusinessRuleException(
+                    "Meter " + meter.getMeterNumber() + " is not assigned to any customer.");
+        }
+
         // Rule: inactive customers cannot receive bills.
         if (customer.getStatus() != CustomerStatus.ACTIVE) {
             throw new BusinessRuleException(
                     "Customer " + customer.getFullNames() + " is INACTIVE and cannot be billed");
+        }
+
+        // Rule: inactive meters cannot be billed.
+        if (meter.getStatus() != MeterStatus.ACTIVE) {
+            throw new BusinessRuleException(
+                    "Meter " + meter.getMeterNumber() + " is INACTIVE and cannot be billed");
         }
 
         // Rule: one bill per meter/month/year.

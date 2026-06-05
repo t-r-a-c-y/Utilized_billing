@@ -11,4 +11,7 @@ public interface MeterService {
     MeterResponse getById(Long id);
     List<MeterResponse> getAll();
     List<MeterResponse> getByCustomer(Long customerId);
+
+    /** A logged-in customer claims an unassigned meter by its number. */
+    MeterResponse claim(String meterNumber, String userEmail);
 }

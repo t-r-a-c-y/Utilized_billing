@@ -26,9 +26,12 @@ public final class EntityMapper {
     }
 
     public static MeterResponse toMeterResponse(Meter m) {
+        Customer c = m.getCustomer();   // may be null for an unassigned meter
         return new MeterResponse(
                 m.getId(), m.getMeterNumber(), m.getMeterType(), m.getInstallationDate(),
-                m.getStatus(), m.getCustomer().getId(), m.getCustomer().getFullNames());
+                m.getStatus(),
+                c != null ? c.getId() : null,
+                c != null ? c.getFullNames() : null);
     }
 
     public static MeterReadingResponse toReadingResponse(MeterReading r) {

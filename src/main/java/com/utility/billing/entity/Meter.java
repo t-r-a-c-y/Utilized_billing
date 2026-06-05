@@ -39,7 +39,9 @@ public class Meter extends BaseEntity {
     @Builder.Default
     private MeterStatus status = MeterStatus.ACTIVE;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "customer_id", nullable = false)
+    // Nullable: an admin can create an UNASSIGNED meter that a customer later
+    // claims by its meter number. A meter belongs to at most one customer.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id")
     private Customer customer;
 }
