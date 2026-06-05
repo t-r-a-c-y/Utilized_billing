@@ -3,7 +3,9 @@
     "allow": [
       "Bash(where psql *)",
       "Bash(where pg_isready)",
-      "Bash(powershell -Command \"Get-Service -Name '*postgres*' -ErrorAction SilentlyContinue | Select-Object Name,Status\")"
+      "Bash(powershell -Command \"Get-Service -Name '*postgres*' -ErrorAction SilentlyContinue | Select-Object Name,Status\")",
+      "Bash(rm -f reg_boot.log)",
+      "PowerShell($c = Get-NetTCPConnection -LocalPort 8089 -State Listen -ErrorAction SilentlyContinue; if \\($c\\) { $c.OwningProcess | Select-Object -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }; Write-Output \"stopped\" } else { Write-Output \"none\" }; Set-Location \"c:/Users/Administrator/Documents/practice of ne/java_ne\"; Remove-Item reg_boot.log -ErrorAction SilentlyContinue; Write-Output cleaned)"
     ]
   }
 }

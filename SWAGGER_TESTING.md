@@ -19,6 +19,16 @@ and proves **validation + no-duplicate** rules. It uses **4 customers**:
 
 ---
 
+## Task coverage (WASAC Tasks 1–6) — where each is tested
+| Task | What | Tested in |
+|------|------|-----------|
+| **1** | User mgmt + JWT (signup, two-step OTP login, roles, +250 phone, password policy) | PART 0, PART 1, PART 9, PART 10 |
+| **2** | Customer & Meter mgmt (CRUD, unique National ID/meter, inactive can't be billed) | PART 2, PART 3, PART 10 |
+| **3** | Meter readings (OPERATOR only, current>prev, 1/period, active meter, date match) | PART 5, PART 10 |
+| **4** | Tariff (flat/tiered) + service charge + tax + penalty, versioned | PART 4 |
+| **5** | Payments (partial/full, outstanding update, mark PAID) | PART 7, PART 10 |
+| **6** | DB routines + messaging (trigger + stored proc + cursor) | **PART 11 (psql, below)** |
+
 ## Reading OTPs
 After any OTP step, read the code from the **IntelliJ Run console**:
 `OtpServiceImpl : OTP for <email> [PURPOSE] = 123456`. Tracy's also arrive by email.
@@ -245,6 +255,69 @@ Every error returns the standard envelope:
   "message":"Customer already exists with National ID: 1199900000000001",
   "path":"/api/v1/customers", "fieldErrors": null }
 ```
+
+---
+
+# PART 11 — Task 6: Database routines (verify in the DATABASE, not Swagger)
+
+Task 6 is **database-level** (trigger + stored procedure + cursor), so it's verified in
+PostgreSQL with `psql`, not through Swagger. This is exactly what was run and confirmed working.
+
+**Step 1 — load the routines once** (after the app has created the tables):
+```bash
+# Windows: set the password first, then run psql
+set PGPASSWORD=1234
+"C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres -h localhost -d utility_billing -f src/main/resources/db/postgres_routines.sql
+```
+
+**Step 2 — confirm they exist:**
+```sql
+SELECT tgname FROM pg_trigger WHERE tgname LIKE 'trg_bill%';           -- 2 triggers
+SELECT proname, prokind FROM pg_proc
+ WHERE proname IN ('fn_bill_after_insert','fn_bill_after_update','sp_apply_overdue_penalties');
+```
+
+**Step 3 — prove the AFTER INSERT trigger** (insert a bill via SQL → a notification appears):
+```sql
+SELECT count(*) FROM notifications;                       -- note the number
+INSERT INTO bills (bill_reference, customer_id, meter_id, bill_month, bill_year, consumption,
+  tariff_amount, service_charge, tax_amount, penalty_amount, total_amount, amount_paid,
+  outstanding_balance, due_date, status, created_at, updated_at)
+SELECT 'TRG-DEMO-12-2027', m.customer_id, m.id, 12, 2027, 50, 17000,1000,3240,0,21240,0,21240,
+  CURRENT_DATE - 5, 'APPROVED', NOW(), NOW()
+FROM meters m WHERE m.customer_id IS NOT NULL LIMIT 1;
+SELECT message, status FROM notifications ORDER BY id DESC LIMIT 1;     -- count +1, "...successfully processed."
+```
+
+**Step 4 — prove the stored procedure + cursor** (overdue penalty):
+```sql
+CALL sp_apply_overdue_penalties(5.00);                    -- cursor walks overdue bills, adds 5%
+SELECT bill_reference, status, penalty_amount, outstanding_balance
+  FROM bills WHERE bill_reference='TRG-DEMO-12-2027';     -- status OVERDUE, penalty 1062.00
+```
+
+**Step 5 — prove the AFTER UPDATE trigger** (full payment → notify):
+```sql
+UPDATE bills SET status='PAID', amount_paid=total_amount, outstanding_balance=0
+  WHERE bill_reference='TRG-DEMO-12-2027';
+SELECT message, status FROM notifications ORDER BY id DESC LIMIT 1;     -- "...fully paid. Thank you." (SENT)
+```
+
+**Clean up the demo rows (optional):**
+```sql
+DELETE FROM notifications WHERE bill_id=(SELECT id FROM bills WHERE bill_reference='TRG-DEMO-12-2027');
+DELETE FROM bills WHERE bill_reference='TRG-DEMO-12-2027';
+```
+
+> ⚠️ **Avoid double notifications:** the running Java app *also* inserts a notification (and sends
+> the email). If you keep these triggers installed **and** run the live app against the same
+> Postgres DB, each bill/payment produces **two** notification rows. For grading, demonstrate
+> Task 6 with the psql steps above; before running the live app on that DB, drop the triggers:
+> ```sql
+> DROP TRIGGER IF EXISTS trg_bill_after_insert ON bills;
+> DROP TRIGGER IF EXISTS trg_bill_after_update ON bills;
+> ```
+> (The Java layer keeps notifications working on any database — including H2 — and also emails them.)
 
 ---
 
