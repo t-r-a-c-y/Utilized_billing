@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,15 +32,23 @@ public class PaymentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(paymentService.record(request));
     }
 
-    @Operation(summary = "List payments for a bill")
-    @PreAuthorize("hasAnyRole('FINANCE','ADMIN','CUSTOMER')")
+    @Operation(summary = "View MY payment history (CUSTOMER)",
+            description = "Returns the payments of the logged-in customer, resolved from the JWT.")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    @GetMapping("/my")
+    public List<PaymentResponse> getMyPayments(Authentication authentication) {
+        return paymentService.getMyPayments(authentication.getName());
+    }
+
+    @Operation(summary = "List payments for a bill (staff)")
+    @PreAuthorize("hasAnyRole('FINANCE','ADMIN')")
     @GetMapping("/bill/{reference}")
     public List<PaymentResponse> getByBill(@PathVariable String reference) {
         return paymentService.getByBill(reference);
     }
 
-    @Operation(summary = "List a customer's payment history")
-    @PreAuthorize("hasAnyRole('FINANCE','ADMIN','CUSTOMER')")
+    @Operation(summary = "List a customer's payment history (staff)")
+    @PreAuthorize("hasAnyRole('FINANCE','ADMIN')")
     @GetMapping("/customer/{customerId}")
     public List<PaymentResponse> getByCustomer(@PathVariable Long customerId) {
         return paymentService.getByCustomer(customerId);

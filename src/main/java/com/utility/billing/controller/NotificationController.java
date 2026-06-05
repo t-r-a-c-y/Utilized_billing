@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,8 +26,16 @@ public class NotificationController {
         return notificationService.getAll();
     }
 
-    @Operation(summary = "List a customer's notifications")
-    @PreAuthorize("hasAnyRole('ADMIN','FINANCE','CUSTOMER')")
+    @Operation(summary = "View MY notifications (CUSTOMER)",
+            description = "Returns the notifications of the logged-in customer, resolved from the JWT.")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    @GetMapping("/my")
+    public List<NotificationResponse> getMyNotifications(Authentication authentication) {
+        return notificationService.getMyNotifications(authentication.getName());
+    }
+
+    @Operation(summary = "List a customer's notifications (staff)")
+    @PreAuthorize("hasAnyRole('ADMIN','FINANCE')")
     @GetMapping("/customer/{customerId}")
     public List<NotificationResponse> getByCustomer(@PathVariable Long customerId) {
         return notificationService.getByCustomer(customerId);

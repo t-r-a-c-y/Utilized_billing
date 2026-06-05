@@ -22,9 +22,11 @@ public class MeterReadingController {
 
     private final MeterReadingService readingService;
 
-    @Operation(summary = "Capture a meter reading (OPERATOR/ADMIN)",
-            description = "Meter must be ACTIVE; current > previous; one reading per meter per month/year.")
-    @PreAuthorize("hasAnyRole('OPERATOR','ADMIN')")
+    @Operation(summary = "Capture a meter reading (OPERATOR only)",
+            description = "Only ROLE_OPERATOR may capture readings. Meter must be ACTIVE; "
+                    + "current > previous; one reading per meter per month/year; the reading date "
+                    + "must fall within that month/year.")
+    @PreAuthorize("hasRole('OPERATOR')")
     @PostMapping
     public ResponseEntity<MeterReadingResponse> capture(@Valid @RequestBody MeterReadingRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(readingService.capture(request));

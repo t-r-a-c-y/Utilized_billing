@@ -13,7 +13,7 @@ public final class EntityMapper {
 
     public static UserResponse toUserResponse(User u) {
         return new UserResponse(
-                u.getId(), u.getFullNames(), u.getEmail(), u.getPhoneNumber(),
+                u.getId(), u.getFullNames(), u.getEmail(), u.getCountryCode(), u.getPhoneNumber(),
                 u.getRole(), u.getStatus(),
                 u.getCustomer() != null ? u.getCustomer().getId() : null);
     }

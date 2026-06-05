@@ -61,6 +61,7 @@ tariff = 20*89 + 30*212 + 70*249 = 1780 + 6360 + 17430 = 25570
 | 9 | Duplicate meter number | repeat `POST /meters` | **409** Conflict |
 | 10 | Reading on INACTIVE meter | capture on inactive meter | **422** "…INACTIVE and cannot receive readings" |
 | 11 | current ≤ previous reading | `currentReading < previous` | **422** "must be greater than previous" |
+| 11b | reading date ≠ stated month/year | date `2026-05-31` with `month:8` | **422** "Reading date … does not match the billing period" |
 | 12 | Duplicate reading (meter+month+year) | repeat same period | **409** Conflict |
 | 13 | Bill for INACTIVE customer | generate for inactive customer | **422** "…INACTIVE and cannot be billed" |
 | 14 | Duplicate bill (meter+month+year) | repeat `POST /bills/generate` | **409** Conflict |

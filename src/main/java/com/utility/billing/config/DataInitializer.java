@@ -28,9 +28,9 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        seedAdmin("admin@utility.rw", "Admin123!", "System Administrator", Role.ROLE_ADMIN, "+250788000001");
-        seedAdmin("operator@utility.rw", "Operator123!", "Field Operator", Role.ROLE_OPERATOR, "+250788000002");
-        seedAdmin("finance@utility.rw", "Finance123!", "Finance Officer", Role.ROLE_FINANCE, "+250788000003");
+        seedAdmin("admin@utility.rw", "Admin123!", "System Administrator", Role.ROLE_ADMIN, "788000001");
+        seedAdmin("operator@utility.rw", "Operator123!", "Field Operator", Role.ROLE_OPERATOR, "788000002");
+        seedAdmin("finance@utility.rw", "Finance123!", "Finance Officer", Role.ROLE_FINANCE, "788000003");
     }
 
     private void seedAdmin(String email, String rawPassword, String name, Role role, String phone) {

@@ -10,4 +10,7 @@ public interface PaymentService {
     List<PaymentResponse> getByBill(String billReference);
     List<PaymentResponse> getByCustomer(Long customerId);
     List<PaymentResponse> getAll();
+
+    /** Payment history of the logged-in customer (resolved from their JWT email). */
+    List<PaymentResponse> getMyPayments(String userEmail);
 }

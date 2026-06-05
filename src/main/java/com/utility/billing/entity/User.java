@@ -28,6 +28,11 @@ public class User extends BaseEntity {
     @Column(nullable = false, unique = true)
     private String email;
 
+    /** Country dialing code; defaults to Rwanda (+250). */
+    @Column(name = "country_code", nullable = false, length = 5)
+    @Builder.Default
+    private String countryCode = "+250";
+
     @Column(name = "phone_number", nullable = false)
     private String phoneNumber;
 

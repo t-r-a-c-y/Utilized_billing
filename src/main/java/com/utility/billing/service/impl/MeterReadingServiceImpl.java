@@ -39,6 +39,16 @@ public class MeterReadingServiceImpl implements MeterReadingService {
                     "Meter " + meter.getMeterNumber() + " is INACTIVE and cannot receive readings");
         }
 
+        // Rule: the reading date must fall within the stated billing period
+        // (its month and year must equal the supplied month/year).
+        if (request.readingDate().getMonthValue() != request.month()
+                || request.readingDate().getYear() != request.year()) {
+            throw new BusinessRuleException(String.format(
+                    "Reading date %s does not match the billing period %02d/%d. "
+                            + "The reading date's month and year must equal the supplied month and year.",
+                    request.readingDate(), request.month(), request.year()));
+        }
+
         // Rule: only one reading per meter per month/year.
         if (readingRepository.existsByMeterIdAndMonthAndYear(
                 meter.getId(), request.month(), request.year())) {

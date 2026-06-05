@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -53,23 +54,32 @@ public class BillController {
         return billService.getAll();
     }
 
-    @Operation(summary = "Get a bill by id")
-    @PreAuthorize("hasAnyRole('ADMIN','FINANCE','OPERATOR','CUSTOMER')")
+    @Operation(summary = "View MY bills (CUSTOMER)",
+            description = "Returns the bills of the logged-in customer, resolved from the JWT — "
+                    + "a customer can only ever see their own bills.")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    @GetMapping("/my")
+    public List<BillResponse> getMyBills(Authentication authentication) {
+        return billService.getMyBills(authentication.getName());
+    }
+
+    @Operation(summary = "Get a bill by id (staff)")
+    @PreAuthorize("hasAnyRole('ADMIN','FINANCE','OPERATOR')")
     @GetMapping("/{id}")
     public BillResponse getById(@PathVariable Long id) {
         return billService.getById(id);
     }
 
-    @Operation(summary = "Get a bill by reference")
-    @PreAuthorize("hasAnyRole('ADMIN','FINANCE','OPERATOR','CUSTOMER')")
+    @Operation(summary = "Get a bill by reference (staff)")
+    @PreAuthorize("hasAnyRole('ADMIN','FINANCE','OPERATOR')")
     @GetMapping("/reference/{reference}")
     public BillResponse getByReference(@PathVariable String reference) {
         return billService.getByReference(reference);
     }
 
-    @Operation(summary = "List a customer's bills",
-            description = "Customers use this to view their own bills.")
-    @PreAuthorize("hasAnyRole('ADMIN','FINANCE','OPERATOR','CUSTOMER')")
+    @Operation(summary = "List a customer's bills (staff)",
+            description = "Staff lookup by customer id. Customers use GET /bills/my instead.")
+    @PreAuthorize("hasAnyRole('ADMIN','FINANCE','OPERATOR')")
     @GetMapping("/customer/{customerId}")
     public List<BillResponse> getByCustomer(@PathVariable Long customerId) {
         return billService.getByCustomer(customerId);

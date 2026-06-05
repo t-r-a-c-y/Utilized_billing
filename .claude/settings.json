@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(where psql *)",
+      "Bash(where pg_isready)",
+      "Bash(powershell -Command \"Get-Service -Name '*postgres*' -ErrorAction SilentlyContinue | Select-Object Name,Status\")"
+    ]
+  }
+}

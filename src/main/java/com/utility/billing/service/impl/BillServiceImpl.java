@@ -38,6 +38,7 @@ public class BillServiceImpl implements BillService {
     private final TaxRepository taxRepository;
     private final PenaltyRepository penaltyRepository;
     private final NotificationService notificationService;
+    private final com.utility.billing.security.CurrentCustomerResolver currentCustomer;
 
     @Override
     @Transactional
@@ -162,6 +163,12 @@ public class BillServiceImpl implements BillService {
     public List<BillResponse> getByCustomer(Long customerId) {
         return billRepository.findByCustomerId(customerId).stream()
                 .map(EntityMapper::toBillResponse).toList();
+    }
+
+    @Override
+    public List<BillResponse> getMyBills(String userEmail) {
+        Long customerId = currentCustomer.resolve(userEmail).getId();
+        return getByCustomer(customerId);
     }
 
     @Override

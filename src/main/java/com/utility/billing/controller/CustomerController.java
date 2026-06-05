@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -36,6 +37,14 @@ public class CustomerController {
     @PutMapping("/{id}")
     public CustomerResponse update(@PathVariable Long id, @Valid @RequestBody CustomerRequest request) {
         return customerService.update(id, request);
+    }
+
+    @Operation(summary = "View MY profile (CUSTOMER)",
+            description = "Returns the logged-in customer's own profile, resolved from the JWT.")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    @GetMapping("/me")
+    public CustomerResponse getMyProfile(Authentication authentication) {
+        return customerService.getMyProfile(authentication.getName());
     }
 
     @Operation(summary = "List all customers")

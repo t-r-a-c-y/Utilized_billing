@@ -21,8 +21,12 @@ public record SignupRequest(
         @NotBlank @Email(message = "A valid email is required")
         String email,
 
-        @Schema(example = "+250788123456")
-        @NotBlank @Pattern(regexp = "^\\+?[0-9]{7,15}$", message = "Phone number is invalid")
+        @Schema(example = "+250", description = "Country dialing code; defaults to Rwanda (+250) when omitted")
+        @Pattern(regexp = "^\\+[0-9]{1,4}$", message = "Country code must look like +250")
+        String countryCode,
+
+        @Schema(example = "788123456", description = "Local phone number (digits only, no country code)")
+        @NotBlank @Pattern(regexp = "^[0-9]{7,12}$", message = "Phone number must be 7-12 digits (no country code)")
         String phoneNumber,
 
         // Strong password policy: >=8 chars, with upper, lower, digit and special char.

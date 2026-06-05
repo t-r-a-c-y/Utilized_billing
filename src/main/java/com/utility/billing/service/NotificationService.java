@@ -14,6 +14,9 @@ public interface NotificationService {
 
     List<NotificationResponse> getByCustomer(Long customerId);
 
+    /** Notifications for the logged-in customer (resolved from their JWT email). */
+    List<NotificationResponse> getMyNotifications(String userEmail);
+
     /** Simulate dispatch: flip PENDING notifications to SENT. */
     NotificationResponse markSent(Long id);
 }

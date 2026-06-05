@@ -7,6 +7,7 @@ public record UserResponse(
         Long id,
         String fullNames,
         String email,
+        String countryCode,
         String phoneNumber,
         Role role,
         UserStatus status,

@@ -44,10 +44,12 @@ Copy `token` → click **Authorize** (top-right) → paste → **Authorize** →
 ### `POST /auth/signup`  → **201**
 ```json
 { "fullNames": "Tracy Tesi", "email": "tracytesi69@gmail.com",
-  "phoneNumber": "+250788111001", "password": "Tracy123!",
+  "countryCode": "+250", "phoneNumber": "788111001", "password": "Tracy123!",
   "role": "ROLE_CUSTOMER", "nationalId": "1199900000000001",
   "address": "KN 1 Ave, Kigali" }
 ```
+> 📞 **Two-section phone:** `countryCode` defaults to **+250** (Rwanda) if you omit it;
+> `phoneNumber` is the local number only (digits, no country code).
 → a signup OTP is **emailed to tracytesi69@gmail.com** (and logged). This becomes **Customer id 1**.
 
 ### `POST /auth/verify-account`  → **200**
@@ -144,7 +146,11 @@ then
 
 ---
 
-# PART 5 — Readings (OPERATOR or ADMIN)  *(POST / GET)*
+# PART 5 — Readings (OPERATOR only)  *(POST / GET)*
+
+> ⚠️ **Only ROLE_OPERATOR may capture readings.** Re-**Authorize** with
+> `operator@utility.rw / Operator123!` (login → console OTP → verify-otp) before this part.
+> An ADMIN token on `POST /readings` returns **403**.
 
 ### `POST /readings`  → **201** (consumption auto = 1320)
 ```json
@@ -152,6 +158,7 @@ then
   "month": 5, "year": 2026 }
 ```
 ### `GET /readings`  → **200** ; `GET /readings/1`  → **200** ; `GET /readings/meter/1`  → **200**
+*(re-Authorize as ADMIN for the remaining parts)*
 
 ---
 
@@ -189,6 +196,20 @@ Note the `billReference` (e.g. `BILL-2026-05-000001`).
 
 ---
 
+# PART 8b — Customer self-service (use **Tracy's token**)  *(the core "view my data" feature)*
+
+Re-**Authorize** with Tracy's token (from PART 1), then:
+### `GET /customers/me`  → **200** — Tracy's own profile (phone shows `+250788111001`)
+### `GET /bills/my`  → **200** — only Tracy's bills
+### `GET /payments/my`  → **200** — only Tracy's payment history
+### `GET /notifications/my`  → **200** — only Tracy's notifications
+
+> A customer **cannot** reach the staff lookups — with Tracy's token:
+> `GET /bills/customer/1` → **403**, `GET /bills/1` → **403**, `GET /payments` → **403**.
+> Customers only ever see their own data through the `/my` and `/me` endpoints.
+
+---
+
 # PART 9 — Users (ADMIN)  *(GET / PATCH)*
 
 ### `GET /users`  → **200** ; `GET /users/1`  → **200**
@@ -207,11 +228,14 @@ Note the `billReference` (e.g. `BILL-2026-05-000001`).
 | `POST /meters` with `installationDate` in the future (e.g. `2099-01-01`) | **400** |
 | `POST /auth/signup` password `abc` (weak) | **400** (policy) |
 | `POST /readings` with `currentReading` ≤ previous | **422** |
+| `POST /readings` where `readingDate` month/year ≠ `month`/`year` (e.g. date `2026-05-31`, `month:8`) | **422** |
 | `POST /readings` duplicate meter 1 / month 5 / 2026 | **409** Conflict |
 | `POST /bills/generate` again for meter 1 / 5 / 2026 | **409** Conflict |
 | `POST /payments` amount `99999999` (over balance) | **422** |
 | `POST /payments` on a still-`PENDING` bill | **422** |
 | Tracy's token → `POST /customers` | **403** Forbidden |
+| **ADMIN** token → `POST /readings` (only OPERATOR may capture) | **403** Forbidden |
+| Tracy's token → `GET /bills/customer/1` or `GET /bills/1` (staff-only) | **403** Forbidden |
 | any secured call with **Authorize → Logout** | **401** |
 | `GET /customers/9999` | **404** |
 
@@ -227,13 +251,13 @@ Every error returns the standard envelope:
 ## Endpoint coverage checklist (all hit above)
 - **Auth:** signup ✓ verify-account ✓ login ✓ verify-otp ✓ forgot-password ✓ reset-password ✓
 - **Users:** GET list ✓ GET id ✓ PATCH status ✓
-- **Customers:** POST ✓ GET ✓ GET id ✓ PUT ✓ PATCH status (activate/deactivate) ✓
+- **Customers:** POST ✓ GET ✓ GET id ✓ **GET /me (customer)** ✓ PUT ✓ PATCH status (activate/deactivate) ✓
 - **Meters:** POST ✓ PUT ✓ GET ✓ GET id ✓ GET by-customer ✓ claim ✓
-- **Readings:** POST ✓ GET ✓ GET id ✓ GET by-meter ✓
+- **Readings:** POST (OPERATOR only) ✓ GET ✓ GET id ✓ GET by-meter ✓
 - **Config:** POST tariff/tax/penalty ✓ GET tariffs/tariff-id/taxes/penalties ✓
-- **Bills:** POST generate ✓ PATCH approve ✓ POST apply-overdue ✓ GET ✓ GET id ✓ GET reference ✓ GET by-customer ✓
-- **Payments:** POST ✓ GET ✓ GET by-bill ✓ GET by-customer ✓
-- **Notifications:** GET ✓ GET by-customer ✓ PATCH sent ✓
+- **Bills:** POST generate ✓ PATCH approve ✓ POST apply-overdue ✓ GET ✓ GET id ✓ GET reference ✓ GET by-customer ✓ **GET /my (customer)** ✓
+- **Payments:** POST ✓ GET ✓ GET by-bill ✓ GET by-customer ✓ **GET /my (customer)** ✓
+- **Notifications:** GET ✓ GET by-customer ✓ **GET /my (customer)** ✓ PATCH sent ✓
 
 > `forgot-password` / `reset-password`: run them against Tracy
 > (`POST /auth/forgot-password {"email":"tracytesi69@gmail.com"}` → reset OTP emailed →

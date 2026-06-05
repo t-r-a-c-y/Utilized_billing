@@ -12,6 +12,9 @@ public interface CustomerService {
     CustomerResponse getById(Long id);
     List<CustomerResponse> getAll();
 
+    /** The logged-in customer's own profile (resolved from their JWT email). */
+    CustomerResponse getMyProfile(String userEmail);
+
     /**
      * Activate or deactivate a customer. Customers are never hard-deleted so the
      * audit history (bills, payments, notifications) is preserved. Inactive

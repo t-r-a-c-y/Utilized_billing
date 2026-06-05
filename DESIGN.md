@@ -216,7 +216,7 @@ sequenceDiagram
 | POST | `/api/v1/meters` | register meter | ADMIN |
 | PUT | `/api/v1/meters/{id}` | update meter | ADMIN |
 | GET | `/api/v1/meters` `/{id}` `/customer/{id}` | list/get meters | ADMIN, FINANCE, OPERATOR |
-| POST | `/api/v1/readings` | capture reading | OPERATOR, ADMIN |
+| POST | `/api/v1/readings` | capture reading | OPERATOR only |
 | GET | `/api/v1/readings` `/{id}` `/meter/{id}` | list/get readings | OPERATOR, ADMIN, FINANCE |
 | POST | `/api/v1/config/tariffs` | create tariff version | ADMIN |
 | GET | `/api/v1/config/tariffs` `/{id}` | list/get tariffs | ADMIN, FINANCE |
@@ -227,7 +227,11 @@ sequenceDiagram
 | POST | `/api/v1/bills/generate` | generate bill | ADMIN, OPERATOR |
 | PATCH | `/api/v1/bills/{id}/approve` | approve bill | ADMIN, FINANCE |
 | POST | `/api/v1/bills/apply-overdue` | apply overdue penalties | ADMIN, FINANCE |
-| GET | `/api/v1/bills` `/{id}` `/reference/{ref}` `/customer/{id}` | view bills | per row |
+| GET | `/api/v1/bills/my` | **customer views their own bills** (from JWT) | CUSTOMER |
+| GET | `/api/v1/bills` `/{id}` `/reference/{ref}` `/customer/{id}` | view bills (staff) | ADMIN, FINANCE, OPERATOR |
+| GET | `/api/v1/payments/my` | **customer views their own payment history** | CUSTOMER |
+| GET | `/api/v1/notifications/my` | **customer views their own notifications** | CUSTOMER |
+| GET | `/api/v1/customers/me` | **customer views their own profile** | CUSTOMER |
 | POST | `/api/v1/payments` | record payment | FINANCE, ADMIN |
 | GET | `/api/v1/payments` `/bill/{ref}` `/customer/{id}` | view payments | FINANCE, ADMIN, CUSTOMER |
 | GET | `/api/v1/notifications` `/customer/{id}` | view notifications | per row |
@@ -243,7 +247,7 @@ sequenceDiagram
 | Configure tariffs/taxes/penalties | ✅ | | view | |
 | Manage customers | ✅ | view | view | |
 | Manage meters | ✅ | view | view | |
-| Capture meter readings | ✅ | ✅ | | |
+| Capture meter readings | | ✅ | | |
 | Generate bills | ✅ | ✅ | | |
 | Approve bills | ✅ | | ✅ | |
 | Record payments | ✅ | | ✅ | |

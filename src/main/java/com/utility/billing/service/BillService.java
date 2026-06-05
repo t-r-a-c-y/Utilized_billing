@@ -13,6 +13,9 @@ public interface BillService {
     List<BillResponse> getAll();
     List<BillResponse> getByCustomer(Long customerId);
 
+    /** Bills belonging to the logged-in customer (resolved from their JWT email). */
+    List<BillResponse> getMyBills(String userEmail);
+
     /** Re-evaluate due dates: mark approved/partially-paid bills past due as OVERDUE and apply penalty. */
     List<BillResponse> applyOverduePenalties();
 }

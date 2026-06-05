@@ -21,6 +21,7 @@ import java.util.List;
 public class CustomerServiceImpl implements CustomerService {
 
     private final CustomerRepository customerRepository;
+    private final com.utility.billing.security.CurrentCustomerResolver currentCustomer;
 
     @Override
     @Transactional
@@ -83,6 +84,11 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     public List<CustomerResponse> getAll() {
         return customerRepository.findAll().stream().map(EntityMapper::toCustomerResponse).toList();
+    }
+
+    @Override
+    public CustomerResponse getMyProfile(String userEmail) {
+        return EntityMapper.toCustomerResponse(currentCustomer.resolve(userEmail));
     }
 
     @Override

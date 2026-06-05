@@ -59,16 +59,22 @@ public class AuthServiceImpl implements AuthService {
             throw new DuplicateResourceException("User already exists with email: " + email);
         }
 
+        // Phone is captured in two parts: country code (Rwanda +250 by default)
+        // and the local number.
+        String countryCode = (request.countryCode() == null || request.countryCode().isBlank())
+                ? "+250" : request.countryCode();
+
         // Customers self-register and get a linked Customer profile.
         Customer customer = null;
         if (request.role() == Role.ROLE_CUSTOMER) {
-            customer = createCustomerProfile(request, email);
+            customer = createCustomerProfile(request, email, countryCode);
         }
 
         // Account starts INACTIVE until the email OTP is verified.
         User user = User.builder()
                 .fullNames(request.fullNames())
                 .email(email)
+                .countryCode(countryCode)
                 .phoneNumber(request.phoneNumber())
                 .password(passwordEncoder.encode(request.password()))
                 .role(request.role())
@@ -83,7 +89,7 @@ public class AuthServiceImpl implements AuthService {
                 "Account created. An OTP has been emailed; verify it at /api/v1/auth/verify-account to activate.");
     }
 
-    private Customer createCustomerProfile(SignupRequest request, String email) {
+    private Customer createCustomerProfile(SignupRequest request, String email, String countryCode) {
         if (request.nationalId() == null || request.nationalId().isBlank()
                 || request.address() == null || request.address().isBlank()) {
             throw new BusinessRuleException(
@@ -100,7 +106,8 @@ public class AuthServiceImpl implements AuthService {
                 .fullNames(request.fullNames())
                 .nationalId(request.nationalId())
                 .email(email)
-                .phoneNumber(request.phoneNumber())
+                // store the full international number on the customer record
+                .phoneNumber(countryCode + request.phoneNumber())
                 .address(request.address())
                 .status(CustomerStatus.ACTIVE)
                 .build());

@@ -28,6 +28,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentRepository paymentRepository;
     private final BillRepository billRepository;
     private final NotificationService notificationService;
+    private final com.utility.billing.security.CurrentCustomerResolver currentCustomer;
 
     @Override
     @Transactional
@@ -97,6 +98,12 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     public List<PaymentResponse> getAll() {
         return paymentRepository.findAll().stream().map(EntityMapper::toPaymentResponse).toList();
+    }
+
+    @Override
+    public List<PaymentResponse> getMyPayments(String userEmail) {
+        Long customerId = currentCustomer.resolve(userEmail).getId();
+        return getByCustomer(customerId);
     }
 
     private String buildPaidMessage(Bill bill) {

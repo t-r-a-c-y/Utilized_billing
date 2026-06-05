@@ -54,7 +54,7 @@ Status of the full exam specification against the current codebase.
 | Customer: nationalId required+unique, email, phone, address | ✅ | `CustomerServiceImpl` / `CustomerRequest` |
 | Meter: number unique, type required | ✅ | |
 | Meter: installation date not future | ✅ | `@PastOrPresent` |
-| Reading: prev≥0, current>prev, 1/month/yr, date, active meter | ✅ | `MeterReadingServiceImpl` |
+| Reading: prev≥0, current>prev, 1/month/yr, date, active meter, **date matches period** | ✅ | `MeterReadingServiceImpl` |
 | Billing: no duplicate, customer active, **meter active** | ✅ | `BillServiceImpl` (meter-active check added) |
 | Payment: amount>0, ≤ outstanding, bill exists, status check | ✅ | `PaymentServiceImpl` |
 

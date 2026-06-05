@@ -24,6 +24,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final EmailService emailService;
+    private final com.utility.billing.security.CurrentCustomerResolver currentCustomer;
 
     @Override
     @Transactional
@@ -55,6 +56,12 @@ public class NotificationServiceImpl implements NotificationService {
     public List<NotificationResponse> getByCustomer(Long customerId) {
         return notificationRepository.findByCustomerId(customerId).stream()
                 .map(EntityMapper::toNotificationResponse).toList();
+    }
+
+    @Override
+    public List<NotificationResponse> getMyNotifications(String userEmail) {
+        Long customerId = currentCustomer.resolve(userEmail).getId();
+        return getByCustomer(customerId);
     }
 
     @Override
