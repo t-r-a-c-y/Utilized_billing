@@ -4,6 +4,7 @@ import com.utility.billing.entity.enums.Role;
 import com.utility.billing.entity.enums.UserStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.ColumnDefault;
 
 /**
  * Application user / system account. Email is the username.
@@ -28,8 +29,11 @@ public class User extends BaseEntity {
     @Column(nullable = false, unique = true)
     private String email;
 
-    /** Country dialing code; defaults to Rwanda (+250). */
+    /** Country dialing code; defaults to Rwanda (+250). The @ColumnDefault makes
+     *  Hibernate emit a DB-level default so the NOT NULL column can be added to an
+     *  already-populated table during ddl-auto=update. */
     @Column(name = "country_code", nullable = false, length = 5)
+    @ColumnDefault("'+250'")
     @Builder.Default
     private String countryCode = "+250";
 
