@@ -29,6 +29,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final BillRepository billRepository;
     private final NotificationService notificationService;
     private final com.utility.billing.security.CurrentCustomerResolver currentCustomer;
+    private final com.utility.billing.config.AuditLogger audit;
 
     @Override
     @Transactional
@@ -75,9 +76,14 @@ public class PaymentServiceImpl implements PaymentService {
             notificationService.createForBill(bill, buildPaidMessage(bill));
         } else {
             bill.setStatus(BillStatus.PARTIALLY_PAID);
+            // Email a receipt for partial payments too, showing the remaining balance.
+            notificationService.emailPaymentReceipt(bill, amount);
         }
         billRepository.save(bill);
 
+        audit.record("PAYMENT", "ref=" + bill.getBillReference() + " amount=" + amount
+                + " method=" + request.paymentMethod() + " newStatus=" + bill.getStatus()
+                + " outstanding=" + bill.getOutstandingBalance());
         return EntityMapper.toPaymentResponse(payment);
     }
 

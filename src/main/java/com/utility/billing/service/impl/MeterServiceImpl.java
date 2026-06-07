@@ -28,6 +28,7 @@ public class MeterServiceImpl implements MeterService {
     private final MeterRepository meterRepository;
     private final CustomerRepository customerRepository;
     private final UserRepository userRepository;
+    private final com.utility.billing.config.AuditLogger audit;
 
     @Override
     @Transactional
@@ -83,7 +84,9 @@ public class MeterServiceImpl implements MeterService {
         }
 
         meter.setCustomer(customer);   // a customer may own many meters
-        return EntityMapper.toMeterResponse(meterRepository.save(meter));
+        Meter saved = meterRepository.save(meter);
+        audit.record("METER_CLAIMED", "meter=" + meterNumber + " customerId=" + customer.getId());
+        return EntityMapper.toMeterResponse(saved);
     }
 
     @Override

@@ -22,6 +22,7 @@ public class CustomerServiceImpl implements CustomerService {
 
     private final CustomerRepository customerRepository;
     private final com.utility.billing.security.CurrentCustomerResolver currentCustomer;
+    private final com.utility.billing.config.AuditLogger audit;
 
     @Override
     @Transactional
@@ -45,7 +46,10 @@ public class CustomerServiceImpl implements CustomerService {
                 .status(request.status() != null ? request.status() : CustomerStatus.ACTIVE)
                 .build();
 
-        return EntityMapper.toCustomerResponse(customerRepository.save(customer));
+        Customer saved = customerRepository.save(customer);
+        audit.record("CUSTOMER_CREATED", "customerId=" + saved.getId()
+                + " nationalId=" + saved.getNationalId());
+        return EntityMapper.toCustomerResponse(saved);
     }
 
     @Override
@@ -97,7 +101,9 @@ public class CustomerServiceImpl implements CustomerService {
         // Soft state change only — the customer row and its history are kept.
         Customer customer = find(id);
         customer.setStatus(status);
-        return EntityMapper.toCustomerResponse(customerRepository.save(customer));
+        Customer saved = customerRepository.save(customer);
+        audit.record("CUSTOMER_STATUS_CHANGE", "customerId=" + id + " status=" + status);
+        return EntityMapper.toCustomerResponse(saved);
     }
 
     private Customer find(Long id) {

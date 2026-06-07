@@ -7,7 +7,14 @@
       "Bash(rm -f reg_boot.log)",
       "PowerShell($c = Get-NetTCPConnection -LocalPort 8089 -State Listen -ErrorAction SilentlyContinue; if \\($c\\) { $c.OwningProcess | Select-Object -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }; Write-Output \"stopped\" } else { Write-Output \"none\" }; Set-Location \"c:/Users/Administrator/Documents/practice of ne/java_ne\"; Remove-Item reg_boot.log -ErrorAction SilentlyContinue; Write-Output cleaned)",
       "Bash(rm -f pg_boot.log)",
-      "Bash(\"C:/Program Files/JetBrains/IntelliJ IDEA 2024.3.2/plugins/maven/lib/maven3/bin/mvn\" -q -DskipTests -Dspring-boot.run.profiles=postgres -Dspring-boot.run.arguments=--server.port=8090 spring-boot:run)"
+      "Bash(\"C:/Program Files/JetBrains/IntelliJ IDEA 2024.3.2/plugins/maven/lib/maven3/bin/mvn\" -q -DskipTests -Dspring-boot.run.profiles=postgres -Dspring-boot.run.arguments=--server.port=8090 spring-boot:run)",
+      "PowerShell($c = Get-NetTCPConnection -LocalPort 8090 -State Listen -ErrorAction SilentlyContinue; if \\($c\\) { $c.OwningProcess | Select-Object -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }; Write-Output \"stopped\" } else { Write-Output \"none\" }; Set-Location \"c:/Users/Administrator/Documents/practice of ne/java_ne\"; Remove-Item pg_boot.log -ErrorAction SilentlyContinue; Write-Output cleaned)",
+      "Bash(rm -f em_boot.log)",
+      "Bash(\"C:/Program Files/JetBrains/IntelliJ IDEA 2024.3.2/plugins/maven/lib/maven3/bin/mvn\" -q -DskipTests -Dspring-boot.run.profiles=h2 -Dspring-boot.run.arguments=--server.port=8089 spring-boot:run)",
+      "PowerShell($c = Get-NetTCPConnection -LocalPort 8089 -State Listen -ErrorAction SilentlyContinue; if \\($c\\) { $c.OwningProcess | Select-Object -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }; Write-Output \"stopped\" } else { Write-Output \"none\" }; Set-Location \"c:/Users/Administrator/Documents/practice of ne/java_ne\"; Remove-Item em_boot.log -ErrorAction SilentlyContinue; Write-Output cleaned)",
+      "Bash(rm -f pay_boot.log)",
+      "Bash(rm -f paypg_boot.log)",
+      "PowerShell(8089,8090 | ForEach-Object { $c = Get-NetTCPConnection -LocalPort $_ -State Listen -ErrorAction SilentlyContinue; if \\($c\\) { $c.OwningProcess | Select-Object -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue } } }; Write-Output \"stopped 8089/8090\"; Set-Location \"c:/Users/Administrator/Documents/practice of ne/java_ne\"; Remove-Item pay_boot.log,paypg_boot.log -ErrorAction SilentlyContinue; Write-Output cleaned)"
     ]
   }
 }

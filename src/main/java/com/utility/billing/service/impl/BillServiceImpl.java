@@ -39,6 +39,7 @@ public class BillServiceImpl implements BillService {
     private final PenaltyRepository penaltyRepository;
     private final NotificationService notificationService;
     private final com.utility.billing.security.CurrentCustomerResolver currentCustomer;
+    private final com.utility.billing.config.AuditLogger audit;
 
     @Override
     @Transactional
@@ -127,6 +128,8 @@ public class BillServiceImpl implements BillService {
         // Requirement: on bill generation, insert a notification message.
         notificationService.createForBill(bill, buildBillMessage(bill));
 
+        audit.record("BILL_GENERATED", "ref=" + bill.getBillReference()
+                + " customer=" + customer.getFullNames() + " amount=" + bill.getTotalAmount());
         return EntityMapper.toBillResponse(bill);
     }
 
@@ -140,7 +143,9 @@ public class BillServiceImpl implements BillService {
                     "Only PENDING bills can be approved; current status is " + bill.getStatus());
         }
         bill.setStatus(BillStatus.APPROVED);
-        return EntityMapper.toBillResponse(billRepository.save(bill));
+        billRepository.save(bill);
+        audit.record("BILL_APPROVED", "ref=" + bill.getBillReference());
+        return EntityMapper.toBillResponse(bill);
     }
 
     @Override

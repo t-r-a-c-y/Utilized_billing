@@ -46,6 +46,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserDetailsService userDetailsService;
     private final JwtService jwtService;
     private final OtpService otpService;
+    private final com.utility.billing.config.AuditLogger audit;
 
     // ----------------------------------------------------------- Signup + verify
 
@@ -83,6 +84,7 @@ public class AuthServiceImpl implements AuthService {
                 .build();
         userRepository.save(user);
         log.info("Registered new {} account: {}", request.role(), email);
+        audit.record("REGISTER", "email=" + email + " role=" + request.role());
 
         int minutes = otpService.issue(email, OtpPurpose.SIGNUP_VERIFICATION);
         return new OtpChallengeResponse(email, OtpPurpose.SIGNUP_VERIFICATION.name(), true, minutes,
@@ -122,6 +124,7 @@ public class AuthServiceImpl implements AuthService {
         user.setStatus(UserStatus.ACTIVE);
         userRepository.save(user);
         log.info("Account verified and activated: {}", email);
+        audit.record("ACCOUNT_VERIFIED", "email=" + email);
         return new MessageResponse("Account verified successfully. You can now log in.");
     }
 
@@ -151,6 +154,7 @@ public class AuthServiceImpl implements AuthService {
         String role = userDetails.getAuthorities().stream().findFirst()
                 .map(Object::toString).orElse("");
         log.info("Login OTP verified, JWT issued for {}", email);
+        audit.record("LOGIN_SUCCESS", "email=" + email + " role=" + role);
         return AuthResponse.of(token, userDetails.getUsername(), role, jwtService.getExpirationMs());
     }
 
@@ -174,6 +178,7 @@ public class AuthServiceImpl implements AuthService {
         user.setPassword(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
         log.info("Password reset for {}", email);
+        audit.record("PASSWORD_RESET", "email=" + email);
         return new MessageResponse("Password reset successfully. You can now log in with your new password.");
     }
 
